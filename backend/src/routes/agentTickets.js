@@ -48,12 +48,12 @@ export async function agentTicketRoutes(fastify) {
     if (filter === 'mine') {
       where = 'WHERE t.assignee_id = ?'; replacements.push(agentId);
     } else if (filter === 'unassigned') {
-      where = 'WHERE t.assignee_id IS NULL AND t.status NOT IN ("resolved","closed")';
+      where = "WHERE t.assignee_id IS NULL AND t.status NOT IN ('resolved','closed')";
     } else if (filter === 'waiting') {
-      where = 'WHERE t.status = "waiting_on_customer"';
+      where = "WHERE t.status = 'waiting_on_customer'";
     } else if (filter !== 'late') {
       // 'all': exclude fully closed
-      where = 'WHERE t.status != "closed"';
+      where = "WHERE t.status != 'closed'";
     }
 
     const offset = (page - 1) * pageSize;
