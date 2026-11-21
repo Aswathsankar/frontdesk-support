@@ -23,6 +23,23 @@ export const WORK_END   = { hour: 18, minute: 30 };
 export const WORKING_MINUTES_PER_DAY = 540; // (18:30 - 09:30) * 60
 
 /**
+ * Robustly converts any Date, ISO string, SQL datetime string, or Luxon DateTime
+ * into an IST-zoned Luxon DateTime object.
+ */
+export function toLuxonIst(input) {
+  if (!input) return DateTime.utc().setZone(IST);
+  if (input instanceof Date) return DateTime.fromJSDate(input, { zone: 'utc' }).setZone(IST);
+  if (typeof input === 'string') {
+    let dt = DateTime.fromISO(input, { zone: 'utc' });
+    if (!dt.isValid) dt = DateTime.fromSQL(input, { zone: 'utc' });
+    if (!dt.isValid) dt = DateTime.fromJSDate(new Date(input), { zone: 'utc' });
+    return dt.isValid ? dt.setZone(IST) : DateTime.utc().setZone(IST);
+  }
+  if (input.isLuxonDateTime) return input.setZone(IST);
+  return DateTime.fromJSDate(new Date(input), { zone: 'utc' }).setZone(IST);
+}
+
+/**
  * Returns true if the given luxon DateTime (in IST) is a working day
  * (Mon-Fri and not a holiday).
  * @param {DateTime} dt - DateTime in IST zone
@@ -61,9 +78,7 @@ function dayEnd(dt) {
  * it starts counting at Monday 09:30.
  */
 export function nextWorkingStart(isoStringOrDt, holidays = []) {
-  let dt = typeof isoStringOrDt === 'string'
-    ? DateTime.fromISO(isoStringOrDt, { zone: 'utc' }).setZone(IST)
-    : isoStringOrDt.setZone(IST);
+  let dt = toLuxonIst(isoStringOrDt);
 
   // If this is a working day and within working hours, we're good
   if (isWorkingDay(dt, holidays)) {
@@ -103,9 +118,7 @@ export function nextWorkingStart(isoStringOrDt, holidays = []) {
  *   4. Else: subtract remaining, advance to next working day, repeat
  */
 export function addWorkingMinutes(startIso, minutes, holidays = []) {
-  let dt = typeof startIso === 'string'
-    ? DateTime.fromISO(startIso, { zone: 'utc' }).setZone(IST)
-    : startIso.setZone(IST);
+  let dt = toLuxonIst(startIso);
 
   // Clamp to working start if needed
   dt = DateTime.fromISO(nextWorkingStart(dt, holidays), { zone: 'utc' }).setZone(IST);
@@ -143,12 +156,8 @@ export function addWorkingMinutes(startIso, minutes, holidays = []) {
  * Used to: compute elapsed time for SLA, compute paused working minutes.
  */
 export function workingMinutesBetween(aIso, bIso, holidays = []) {
-  let a = (typeof aIso === 'string'
-    ? DateTime.fromISO(aIso, { zone: 'utc' })
-    : aIso).setZone(IST);
-  let b = (typeof bIso === 'string'
-    ? DateTime.fromISO(bIso, { zone: 'utc' })
-    : bIso).setZone(IST);
+  let a = toLuxonIst(aIso);
+  let b = toLuxonIst(bIso);
 
   if (a >= b) return 0;
 
