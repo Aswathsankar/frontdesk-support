@@ -86,14 +86,14 @@ export async function buildApp(opts = {}) {
     await fastify.register(fastifyStatic, {
       root: frontendDist,
       prefix: '/',
-      decorateReply: false,
+      decorateReply: true,
     });
     // SPA fallback
     fastify.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith('/api/')) {
         reply.code(404).send({ error: 'Not found' });
       } else {
-        reply.sendFile('index.html', frontendDist);
+        reply.sendFile('index.html');
       }
     });
   } catch {
