@@ -1,4 +1,5 @@
-import 'dotenv/config';
+// Environment is loaded via node --env-file=.env (Node 20+) or process.env from the shell.
+// dotenv is NOT used as a dependency — keep it simple.
 
 export const config = {
   port: parseInt(process.env.PORT || '3000', 10),

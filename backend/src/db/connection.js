@@ -6,11 +6,32 @@
  *
  * Both set time_zone='+00:00' on each connection so all DATETIME values
  * are stored and returned as UTC (INC-0318 requirement).
+ *
+ * SSL: If DB_SSL_CA env var is set (path to Aiven CA certificate), SSL is
+ * enabled with full certificate verification.  Local docker-compose dev
+ * leaves DB_SSL_CA unset so no SSL is required there.
  */
+import fs from 'fs';
 import { Sequelize } from 'sequelize';
 import { config } from '../config/env.js';
 
-function makeOptions(database, username, password, host, port) {
+function makeSslOptions() {
+  const caContent = process.env.DB_SSL_CA_CONTENT;
+  const caPath = process.env.DB_SSL_CA;
+  if (!caContent && !caPath) return null; // local dev without SSL
+
+  return {
+    ssl: {
+      ca: caContent ? Buffer.from(caContent, 'utf-8') : fs.readFileSync(caPath),
+      // Do NOT set rejectUnauthorized: false — that defeats the whole point.
+      // Aiven's CA cert is verified explicitly.
+      rejectUnauthorized: true,
+    },
+  };
+}
+
+function makeOptions(database, username, password, host, port, extra = {}) {
+  const ssl = makeSslOptions();
   return {
     dialect: 'mysql',
     host,
@@ -21,8 +42,11 @@ function makeOptions(database, username, password, host, port) {
     timezone: '+00:00',
     dialectOptions: {
       // Ensure the connection session uses UTC
-      // and returns DATETIME as strings (not JS Date) so we control parsing
       timezone: '+00:00',
+      // SSL config (null-spread is ignored if no SSL needed)
+      ...(ssl || {}),
+      // Allow callers (migration runner) to enable multipleStatements
+      ...extra,
     },
     logging: config.nodeEnv === 'development' ? console.log : false,
     pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },
@@ -61,9 +85,11 @@ export async function getConnection() {
   }
 
   const seq = new Sequelize(opts);
-  // Force UTC on every new connection
+  // Force UTC on every new connection.
+  // afterConnect receives the raw mysql2 connection (non-promise), so use
+  // conn.promise().query() — do NOT await conn.query() directly.
   seq.addHook('afterConnect', async (conn) => {
-    await conn.query("SET time_zone = '+00:00'");
+    await conn.promise().query("SET time_zone = '+00:00'");
   });
   await seq.authenticate();
   _appConnection = seq;
@@ -71,24 +97,26 @@ export async function getConnection() {
 }
 
 export async function getAdminConnection() {
-  // For migrations: use ADMIN_DATABASE_URL or same creds as app
+  // For migrations: use ADMIN_DATABASE_URL or same creds as app.
+  // multipleStatements: true is needed so the runner can send multi-statement SQL files.
   const adminUrl = process.env.ADMIN_DATABASE_URL || process.env.DATABASE_URL;
   let opts;
   if (adminUrl) {
     const p = parseDatabaseUrl(adminUrl);
-    opts = makeOptions(p.database, p.username, p.password, p.host, p.port);
+    opts = makeOptions(p.database, p.username, p.password, p.host, p.port, { multipleStatements: true });
   } else {
     opts = makeOptions(
       config.dbName,
       process.env.DB_ADMIN_USER || config.dbUser,
       process.env.DB_ADMIN_PASS || config.dbPass,
       config.dbHost,
-      config.dbPort
+      config.dbPort,
+      { multipleStatements: true }
     );
   }
   const seq = new Sequelize(opts);
   seq.addHook('afterConnect', async (conn) => {
-    await conn.query("SET time_zone = '+00:00'");
+    await conn.promise().query("SET time_zone = '+00:00'");
   });
   await seq.authenticate();
   return seq;
