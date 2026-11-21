@@ -37,7 +37,7 @@ const HOLIDAYS = [
 ];
 
 const AGENTS = [
-  { name: 'Priya Sharma',   email: 'priya@arvo.dev' },
+  { name: 'Aswath Menon',   email: 'aswath@arvo.dev' },
   { name: 'Rahul Verma',    email: 'rahul@arvo.dev' },
   { name: 'Anjali Singh',   email: 'anjali@arvo.dev' },
   { name: 'Karan Mehta',    email: 'karan@arvo.dev' },

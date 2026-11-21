@@ -27,7 +27,7 @@
 
 All 9 agents share the demo password: `Demo@1234`
 
-- `priya@arvo.dev`
+- `aswath@arvo.dev` (Aswath Menon — Lead Support Engineer)
 - `rahul@arvo.dev`
 - `anjali@arvo.dev`
 - `karan@arvo.dev`

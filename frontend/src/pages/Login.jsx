@@ -124,7 +124,10 @@ export default function Login() {
           </a>
         </Typography>
         <Typography variant="caption" sx={{ color: '#475569', display: 'block', textAlign: 'center', mt: 2 }}>
-          Demo: priya@arvo.dev / Demo@1234
+          Demo: aswath@arvo.dev / Demo@1234
+        </Typography>
+        <Typography variant="caption" sx={{ color: '#334155', display: 'block', textAlign: 'center', mt: 1 }}>
+          Built by Aswath Menon · Coligo Assessment
         </Typography>
       </Paper>
     </Box>

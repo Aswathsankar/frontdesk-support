@@ -49,7 +49,7 @@ All 9 agents are pre-seeded in the database:
 
 | Agent Name | Email | Password |
 |---|---|---|
-| Priya Sharma | `priya@arvo.dev` | `Demo@1234` |
+| Aswath Menon (Lead) | `aswath@arvo.dev` | `Demo@1234` |
 | Rahul Verma | `rahul@arvo.dev` | `Demo@1234` |
 | Anjali Nair | `anjali@arvo.dev` | `Demo@1234` |
 | Karan Patel | `karan@arvo.dev` | `Demo@1234` |
