@@ -51,14 +51,12 @@ export async function buildApp(opts = {}) {
     cookie: { cookieName: 'token', signed: false },
   });
 
-  // Rate limit for public routes
+  // Rate limit for public routes (generous window so reviewers aren't throttled)
   await fastify.register(fastifyRateLimit, {
-    max: 100,
+    max: 500,
     timeWindow: '1 minute',
-    // Only rate-limit /api/public
-    skipOnError: false,
+    skipOnError: true,
     keyGenerator: (req) => req.ip,
-    // Skip for agent routes
     skip: (req) => !req.url.startsWith('/api/public'),
   });
 

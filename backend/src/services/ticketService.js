@@ -15,8 +15,14 @@ import {
   computePausedMinutes,
 } from './slaService.js';
 
-function nowUtc() {
-  return DateTime.utc().toISO();
+function toSqlDate(isoOrDt) {
+  if (!isoOrDt) return null;
+  const dt = typeof isoOrDt === 'string' ? DateTime.fromISO(isoOrDt, { zone: 'utc' }) : isoOrDt.toUTC();
+  return dt.isValid ? dt.toFormat('yyyy-MM-dd HH:mm:ss.SSS') : isoOrDt;
+}
+
+function nowSql() {
+  return DateTime.utc().toFormat('yyyy-MM-dd HH:mm:ss.SSS');
 }
 
 /**
@@ -24,8 +30,11 @@ function nowUtc() {
  */
 export async function createTicket(sequelize, { customer_email, subject, priority = 'medium', related_ticket_id = null }) {
   const holidays = await getHolidays(sequelize);
-  const created_at = nowUtc();
-  const { response_due_at, resolution_due_at } = computeDeadlines(created_at, priority, holidays);
+  const created_at_iso = DateTime.utc().toISO();
+  const created_at = nowSql();
+  const { response_due_at: respIso, resolution_due_at: resolIso } = computeDeadlines(created_at_iso, priority, holidays);
+  const response_due_at = toSqlDate(respIso);
+  const resolution_due_at = toSqlDate(resolIso);
   const customer_ref = uuidv4();
 
   const t = await sequelize.transaction();
@@ -38,7 +47,7 @@ export async function createTicket(sequelize, { customer_email, subject, priorit
         transaction: t,
       }
     );
-    const ticket_id = result.insertId;
+    const ticket_id = typeof result === 'number' ? result : (result?.insertId || result);
 
     await writeAuditEvent(sequelize, t, {
       ticket_id,
@@ -115,7 +124,7 @@ export async function claimTicket(sequelize, ticketId, agentId, agentName) {
 export async function addReply(sequelize, ticketId, agentId, agentName, body, visibility = 'public') {
   const t = await sequelize.transaction();
   try {
-    const created_at = nowUtc();
+    const created_at = nowSql();
 
     // If public reply and ticket hasn't had a response yet, record first_response_at
     if (visibility === 'public') {
@@ -171,7 +180,7 @@ export async function customerReply(sequelize, ticketRef, customerEmail, body) {
       const err = new Error('Ticket not found'); err.statusCode = 404; throw err;
     }
 
-    const created_at = nowUtc();
+    const created_at = nowSql();
 
     if (ticket.status === 'waiting_on_customer') {
       // Resume open SLA pause
@@ -214,7 +223,7 @@ export async function customerReply(sequelize, ticketRef, customerEmail, body) {
 export async function setWaitingOnCustomer(sequelize, ticketId, agentId, agentName) {
   const t = await sequelize.transaction();
   try {
-    const paused_at = nowUtc();
+    const paused_at = nowSql();
     // Optimistic lock: increment version
     const [, meta] = await sequelize.query(
       `UPDATE tickets SET status = 'waiting_on_customer', version = version + 1 WHERE id = ? AND status NOT IN ('resolved','closed')`,
@@ -262,7 +271,9 @@ export async function changePriority(sequelize, ticketId, agentId, agentName, ne
     }
 
     const oldPriority = ticket.priority;
-    const { response_due_at, resolution_due_at } = recomputeDeadlinesAfterPriorityChange(ticket, newPriority, holidays);
+    const { response_due_at: respIso, resolution_due_at: resolIso } = recomputeDeadlinesAfterPriorityChange(ticket, newPriority, holidays);
+    const response_due_at = toSqlDate(respIso);
+    const resolution_due_at = toSqlDate(resolIso);
 
     await sequelize.query(
       `UPDATE tickets SET priority = ?, response_due_at = ?, resolution_due_at = ?, version = version + 1 WHERE id = ?`,
@@ -296,7 +307,7 @@ export async function changePriority(sequelize, ticketId, agentId, agentName, ne
 export async function resolveTicket(sequelize, ticketId, agentId, agentName) {
   const t = await sequelize.transaction();
   try {
-    const resolved_at = nowUtc();
+    const resolved_at = nowSql();
     const [, meta] = await sequelize.query(
       `UPDATE tickets SET status = 'resolved', resolved_at = ?, close_reason = 'resolved', version = version + 1
        WHERE id = ? AND status NOT IN ('resolved','closed')`,
@@ -347,7 +358,7 @@ export async function reopenTicket(sequelize, ticketRef, customerEmail) {
       const err = new Error(reason); err.statusCode = 409; throw err;
     }
 
-    const now = nowUtc();
+    const now = nowSql();
     await sequelize.query(
       `UPDATE tickets SET status = 'open', resolved_at = NULL, close_reason = NULL, version = version + 1 WHERE id = ?`,
       { replacements: [ticket.id], transaction: t }
@@ -373,7 +384,7 @@ export async function reopenTicket(sequelize, ticketRef, customerEmail) {
  */
 export async function autoCloseEligibleTickets(sequelize) {
   const holidays = await getHolidays(sequelize);
-  const now = nowUtc();
+  const now = nowSql();
 
   // Find all waiting tickets with an open pause
   const [waiting] = await sequelize.query(
