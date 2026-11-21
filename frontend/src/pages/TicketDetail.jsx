@@ -129,8 +129,23 @@ export default function TicketDetail() {
     setAuditOpen(true);
   };
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', pt: 10 }}><CircularProgress sx={{ color: '#6366f1' }} /></Box>;
-  if (!data) return <Box sx={{ p: 4 }}><Alert severity="error">Ticket not found</Alert></Box>;
+  if (loading) {
+    return (
+      <Box sx={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress sx={{ color: '#6366f1' }} />
+      </Box>
+    );
+  }
+  if (!data || !data.ticket) {
+    return (
+      <Box sx={{ minHeight: '100vh', background: '#0f172a', p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 10 }}>
+        <Alert severity="error" sx={{ mb: 2, maxWidth: 400 }}>Ticket #{id} not found or access denied.</Alert>
+        <Button variant="contained" onClick={() => navigate('/')} sx={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+          Back to Dashboard
+        </Button>
+      </Box>
+    );
+  }
 
   const { ticket, messages } = data;
 
@@ -153,8 +168,8 @@ export default function TicketDetail() {
           <Paper sx={{ p: 3, mb: 3, background: '#1e293b', border: '1px solid rgba(99,102,241,0.15)' }}>
             <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
               <Chip label={`#${ticket.id}`} size="small" sx={{ color: '#475569' }} />
-              <Chip label={ticket.priority} color={PRIORITY_COLORS[ticket.priority]} size="small" id="detail-priority-chip" />
-              <Chip label={ticket.status.replace('_', ' ')} color={STATUS_COLORS[ticket.status]} size="small" variant="outlined" />
+              <Chip label={ticket.priority || 'medium'} color={PRIORITY_COLORS[ticket.priority] || 'default'} size="small" id="detail-priority-chip" />
+              <Chip label={(ticket.status || '').replace(/_/g, ' ')} color={STATUS_COLORS[ticket.status] || 'default'} size="small" variant="outlined" />
               {ticket.is_late && <Chip label="LATE" color="error" size="small" id="detail-late-badge" />}
               {ticket.is_waiting && <Chip label="WAITING ON CUSTOMER" color="warning" size="small" />}
             </Box>
@@ -181,7 +196,7 @@ export default function TicketDetail() {
 
           {/* Messages timeline */}
           <Box sx={{ mb: 3 }}>
-            {messages.map((msg) => (
+            {(messages || []).map((msg) => (
               <TimelineItem key={msg.id} msg={msg} type="message" />
             ))}
           </Box>
