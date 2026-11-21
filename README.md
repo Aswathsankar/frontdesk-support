@@ -181,6 +181,5 @@ frontdesk/
 ├── docker-compose.yml         # Containerized local environment
 ├── Dockerfile                 # Multi-stage production build
 ├── .github/workflows/ci.yml   # GitHub Actions automated test & lint pipeline
-├── NOTES.md                   # Documented assumptions & edge case handling
-└── INTERVIEW.md               # Technical review & system design guide
+└── NOTES.md                   # Documented assumptions & edge case handling
 ```
