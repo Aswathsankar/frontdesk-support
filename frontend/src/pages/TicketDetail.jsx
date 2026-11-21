@@ -170,8 +170,8 @@ export default function TicketDetail() {
               <Chip label={`#${ticket.id}`} size="small" sx={{ color: '#475569' }} />
               <Chip label={ticket.priority || 'medium'} color={PRIORITY_COLORS[ticket.priority] || 'default'} size="small" id="detail-priority-chip" />
               <Chip label={(ticket.status || '').replace(/_/g, ' ')} color={STATUS_COLORS[ticket.status] || 'default'} size="small" variant="outlined" />
-              {ticket.is_late && <Chip label="LATE" color="error" size="small" id="detail-late-badge" />}
-              {ticket.is_waiting && <Chip label="WAITING ON CUSTOMER" color="warning" size="small" />}
+              {(ticket.is_late || ticket.isLate) && <Chip label="LATE" color="error" size="small" id="detail-late-badge" />}
+              {(ticket.is_waiting || ticket.status === 'waiting_on_customer') && <Chip label="WAITING ON CUSTOMER" color="warning" size="small" />}
             </Box>
             <Typography variant="h6" sx={{ color: '#f1f5f9', mb: 1 }}>{ticket.subject}</Typography>
             <Typography variant="body2" sx={{ color: '#94a3b8' }}>From: {ticket.customer_email}</Typography>
@@ -181,14 +181,14 @@ export default function TicketDetail() {
             <Box sx={{ display: 'flex', gap: 3, mt: 2 }}>
               <Box>
                 <Typography variant="caption" sx={{ color: '#94a3b8' }}>Response SLA</Typography>
-                <Typography variant="body2" sx={{ color: ticket.response_late ? '#ef4444' : '#10b981', fontWeight: 600 }}>
-                  {ticket.first_response_at ? '✓ Sent' : formatMinutes(ticket.responseRemaining)}
+                <Typography variant="body2" sx={{ color: (ticket.response_late || ticket.responseLate) ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                  {ticket.first_response_at ? '✓ Sent' : formatMinutes(ticket.response_remaining_min ?? ticket.responseRemaining)}
                 </Typography>
               </Box>
               <Box>
                 <Typography variant="caption" sx={{ color: '#94a3b8' }}>Resolution SLA</Typography>
-                <Typography variant="body2" sx={{ color: ticket.resolution_late ? '#ef4444' : '#10b981', fontWeight: 600 }}>
-                  {formatMinutes(ticket.resolutionRemaining)}
+                <Typography variant="body2" sx={{ color: (ticket.resolution_late || ticket.resolutionLate) ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                  {formatMinutes(ticket.resolution_remaining_min ?? ticket.resolutionRemaining)}
                 </Typography>
               </Box>
             </Box>
@@ -287,7 +287,7 @@ export default function TicketDetail() {
                 fullWidth variant="outlined" size="small"
                 onClick={() => changePriority(p)}
                 disabled={sending}
-                color={PRIORITY_COLORS[p]}
+                color={p === 'urgent' ? 'error' : p === 'medium' ? 'warning' : 'info'}
                 sx={{ mb: 0.5 }}
               >
                 Set {p}
