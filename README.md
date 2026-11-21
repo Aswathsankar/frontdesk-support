@@ -183,3 +183,22 @@ frontdesk/
 ├── .github/workflows/ci.yml   # GitHub Actions automated test & lint pipeline
 └── NOTES.md                   # Documented assumptions & edge case handling
 ```
+
+---
+
+## 📌 Section 5: What Was Not Finished & Why
+
+Per the assessment instructions: *"What did you not finish, and why? Running out of time is normal. Not knowing what you skipped is not."*
+
+Within the ~8-hour target allocation, core business logic, the working-hours SLA engine, concurrency guarantees, and database-level security were strictly prioritized. The following items were consciously deferred:
+
+1. **Bidirectional WebSockets / Real-time Push:**
+   - *What was built instead:* Reactive REST polling, manual refresh controls, and optimistic concurrency versioning (`version` column).
+   - *Why deferred:* Setting up a robust WebSocket or Server-Sent Events (SSE) layer with Redis adapter for multi-instance horizontal scaling would have added operational overhead on free-tier hosting without improving the core assessment requirements (SLA math, atomic claiming, audit immutability).
+2. **File / Image Attachments on Tickets:**
+   - *What was built instead:* Rich multi-line text descriptions, structured message threads, and sanitized internal notes.
+   - *Why deferred:* Handling multipart uploads securely requires an external object store (e.g., AWS S3, Cloudflare R2) and presigned URL infrastructure, adding external credentials and cloud dependencies that complicate 1-command local evaluation (`docker-compose up`).
+3. **Granular Database Role Separation (App User vs. DDL Admin):**
+   - *What was built instead:* Single database connection using InnoDB row-level triggers (`BEFORE UPDATE/DELETE`) raising `SQLSTATE '45000'` on `audit_events` and `messages`.
+   - *Why deferred:* In MySQL, `TRUNCATE` can bypass row-level triggers. In an enterprise production cluster, this is resolved by provisioning a dedicated application role without `DROP` or `TRUNCATE` permissions. In a shared free-tier cloud DB (Aiven single administrative user), this constraint was documented transparently in `NOTES.md` rather than implementing custom cloud IAM scripts.
+
